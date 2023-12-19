@@ -19,9 +19,6 @@ pub struct Args {
     #[arg(long, default_value_t = 60)]
     pub duration_in_seconds: u64,
 
-    #[arg(long, default_value_t = 1)]
-    pub quotes_per_seconds: u64,
-
     #[arg(short = 'c', long)]
     pub simulation_configuration: String,
 

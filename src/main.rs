@@ -81,11 +81,7 @@ async fn main() -> anyhow::Result<()> {
         CommitmentConfig::finalized(),
     ));
 
-    let mut openbook_simulation_stats = OpenbookV2SimulationStats::new(
-        config.users.len(),
-        args.quotes_per_seconds as usize,
-        args.duration_in_seconds as usize,
-    );
+    let mut openbook_simulation_stats = OpenbookV2SimulationStats::new();
 
     // create a task that updates blockhash after every interval
     let recent_blockhash = rpc_client
@@ -158,7 +154,6 @@ async fn main() -> anyhow::Result<()> {
     let transaction_send_bridge_task =
         create_transaction_bridge(tx_rx, tpu_manager, 16, Duration::from_millis(5));
     other_services.push(transaction_send_bridge_task);
-
 
     // task which updates stats
     let mut stats = openbook_simulation_stats.clone();

@@ -101,16 +101,14 @@ impl Counters {
 
 #[derive(Debug, Clone)]
 pub struct OpenbookV2SimulationStats {
-    recv_limit: usize,
     counters: Counters,
     previous_counters: Arc<Mutex<NACounters>>,
     instant: Instant,
 }
 
 impl OpenbookV2SimulationStats {
-    pub fn new(nb_users: usize, quotes_per_second: usize, duration_in_sec: usize) -> Self {
+    pub fn new() -> Self {
         Self {
-            recv_limit: nb_users * quotes_per_second * duration_in_sec,
             counters: Counters::default(),
             instant: Instant::now(),
             previous_counters: Arc::new(Mutex::new(NACounters::default())),
@@ -190,10 +188,6 @@ impl OpenbookV2SimulationStats {
             diff
         };
 
-        println!(
-            "Number of expected marker making transactions : {}",
-            self.recv_limit
-        );
         println!(
             "Number of transactions Sent:({}) (including keeper) (Diff:({}))",
             counters.num_sent, diff.num_sent,

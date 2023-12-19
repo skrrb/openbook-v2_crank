@@ -3648,7 +3648,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "openbook-v2"
 version = "0.1.0"
-source = "git+https://github.com/openbook-dex/openbook-v2#dc92672b70513221ca36b3d88d55da61a02a9c3a"
+source = "git+https://github.com/openbook-dex/openbook-v2?tag=v1.1#1899fa27a070ce1134b1c6b32a4d3f7669045cce"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -3661,6 +3661,7 @@ dependencies = [
  "pyth-sdk-solana 0.8.0",
  "raydium-amm-v3",
  "solana-program",
+ "solana-security-txt",
  "static_assertions",
  "switchboard-program",
  "switchboard-v2",
@@ -6424,6 +6425,12 @@ dependencies = [
  "rustversion",
  "syn 2.0.31",
 ]
+
+[[package]]
+name = "solana-security-txt"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 
 [[package]]
 name = "solana-send-transaction-service"

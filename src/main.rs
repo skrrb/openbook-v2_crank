@@ -4,7 +4,6 @@ use cli::Args;
 use confirmation_strategy::confirmations_by_blocks;
 use helpers::{create_transaction_bridge, start_blockhash_polling_service};
 use json_config::Config;
-use market_maker::start_market_makers;
 use openbook_config::Obv2Config;
 use result_writer::initialize_result_writers;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -21,7 +20,6 @@ mod confirmation_strategy;
 mod crank;
 mod helpers;
 mod json_config;
-mod market_maker;
 mod openbook_config;
 mod openbook_v2_sink;
 mod result_writer;
@@ -161,15 +159,6 @@ async fn main() -> anyhow::Result<()> {
         create_transaction_bridge(tx_rx, tpu_manager, 16, Duration::from_millis(5));
     other_services.push(transaction_send_bridge_task);
 
-    // start market making
-    let market_makers_task = start_market_makers(
-        &args,
-        &obv2_config,
-        &program_id,
-        tx_sx,
-        blockhash_rw,
-        current_slot.clone(),
-    );
 
     // task which updates stats
     let mut stats = openbook_simulation_stats.clone();
@@ -181,19 +170,6 @@ async fn main() -> anyhow::Result<()> {
     });
     other_services.push(reporting_thread);
 
-    match tokio::time::timeout(
-        Duration::from_secs(args.duration_in_seconds),
-        futures::future::select_all(market_makers_task),
-    )
-    .await
-    {
-        Err(_) => {
-            // market making tasks should timeout anyways it is normal behavior
-        }
-        Ok(_) => {
-            log::error!("user unexpectedly exited sending transactions");
-        }
-    }
     // wait for 2 minutes fo all the transactions to get confirmed
     let _ = tokio::time::timeout(
         Duration::from_secs(120),

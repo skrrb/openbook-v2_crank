@@ -35,11 +35,6 @@ async fn main() -> anyhow::Result<()> {
         .context("Should have been able to read the file")?;
     let config: Config = serde_json::from_str(&config).context("Config file not valid")?;
 
-    if config.users.is_empty() {
-        log::error!("Config file is missing payers");
-        bail!("No payers");
-    }
-
     if config.markets.is_empty() {
         log::error!("Config file is missing markets");
         bail!("No markets")
@@ -68,12 +63,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let obv2_config = Obv2Config::try_from(&config).expect("should be convertible to obv2 config");
-    let program_id = obv2_config
-        .programs
-        .iter()
-        .find(|x| x.name == "openbook_v2")
-        .expect("msg")
-        .program_id;
+    let program_id = obv2_config.program_id;
     let (tx_sx, tx_rx) = unbounded_channel();
 
     let rpc_client = Arc::new(RpcClient::new_with_commitment(

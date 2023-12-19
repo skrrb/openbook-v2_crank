@@ -1,4 +1,5 @@
 use clap::Parser;
+use solana_sdk::pubkey::Pubkey;
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -33,4 +34,7 @@ pub struct Args {
 
     #[arg(long, default_value_t = 10)]
     pub transaction_retry_in_ms: u64,
+
+    #[arg(long, default_value_t = openbook_v2::ID)]
+    pub program_id: Pubkey,
 }

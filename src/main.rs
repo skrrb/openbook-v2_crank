@@ -1,10 +1,10 @@
-use anyhow::{bail, Context};
+use anchor_lang::AccountDeserialize;
 use clap::Parser;
 use cli::Args;
 use confirmation_strategy::confirmations_by_blocks;
 use helpers::{create_transaction_bridge, start_blockhash_polling_service};
-use json_config::Config;
-use openbook_config::Obv2Config;
+use openbook_config::{Obv2Config, Obv2Market};
+use openbook_v2::state::Market;
 use result_writer::initialize_result_writers;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Keypair};
@@ -19,7 +19,6 @@ mod cli;
 mod confirmation_strategy;
 mod crank;
 mod helpers;
-mod json_config;
 mod openbook_config;
 mod openbook_v2_sink;
 mod result_writer;
@@ -30,15 +29,6 @@ mod tpu_manager;
 #[tokio::main(flavor = "multi_thread", worker_threads = 16)]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
-
-    let config = std::fs::read_to_string(&args.simulation_configuration)
-        .context("Should have been able to read the file")?;
-    let config: Config = serde_json::from_str(&config).context("Config file not valid")?;
-
-    if config.markets.is_empty() {
-        log::error!("Config file is missing markets");
-        bail!("No markets")
-    }
 
     let identity = if !args.identity.is_empty() {
         let identity_file = tokio::fs::read_to_string(args.identity.as_str())
@@ -62,13 +52,38 @@ async fn main() -> anyhow::Result<()> {
         panic!("Keeper authority is needed");
     };
 
-    let obv2_config = Obv2Config::try_from(&config).expect("should be convertible to obv2 config");
     let (tx_sx, tx_rx) = unbounded_channel();
 
     let rpc_client = Arc::new(RpcClient::new_with_commitment(
         args.rpc_url.to_string(),
         CommitmentConfig::finalized(),
     ));
+
+    let infos = rpc_client
+        .get_multiple_accounts(&args.markets)
+        .await
+        .expect("cannot fetch markets");
+
+    let obv2_config = Obv2Config {
+        markets: args
+            .markets
+            .iter()
+            .zip(infos)
+            .filter_map(|(pubkey, info)| {
+                if let Some(info) = info {
+                    let market = Market::try_deserialize(&mut &info.data[..])
+                        .expect("cannot deserialize market");
+                    Some(Obv2Market {
+                        market_pk: *pubkey,
+                        event_heap: market.event_heap,
+                        admin: market.consume_events_admin.into(),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>(),
+    };
 
     let mut openbook_simulation_stats = OpenbookV2SimulationStats::new();
 

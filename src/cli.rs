@@ -37,4 +37,8 @@ pub struct Args {
 
     #[arg(long, default_value_t = openbook_v2::ID)]
     pub program_id: Pubkey,
+
+    /// List of markets to crank
+    #[arg(long, required = true, num_args = 1..)]
+    pub markets: Vec<Pubkey>,
 }

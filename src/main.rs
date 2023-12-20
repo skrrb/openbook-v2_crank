@@ -63,7 +63,6 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let obv2_config = Obv2Config::try_from(&config).expect("should be convertible to obv2 config");
-    let program_id = obv2_config.program_id;
     let (tx_sx, tx_rx) = unbounded_channel();
 
     let rpc_client = Arc::new(RpcClient::new_with_commitment(
@@ -105,7 +104,7 @@ async fn main() -> anyhow::Result<()> {
     // start event queue crank
     let mut other_services = crank::start(
         crank::KeeperConfig {
-            program_id,
+            program_id: args.program_id,
             rpc_url: args.rpc_url.to_string(),
             websocket_url: args.ws_url.to_string(),
         },

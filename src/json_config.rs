@@ -8,6 +8,5 @@ pub struct Market {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Config {
-    pub program_id: String,
     pub markets: Vec<Market>,
 }

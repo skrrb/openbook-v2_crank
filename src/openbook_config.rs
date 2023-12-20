@@ -12,7 +12,6 @@ pub struct Obv2Market {
 
 #[derive(Clone, Debug)]
 pub struct Obv2Config {
-    pub program_id: Pubkey,
     pub markets: Vec<Obv2Market>,
 }
 
@@ -23,7 +22,6 @@ pub fn convert_to_pk(key: &String) -> Pubkey {
 impl From<&Config> for Obv2Config {
     fn from(value: &Config) -> Self {
         Self {
-            program_id: convert_to_pk(&value.program_id),
             markets: value
                 .markets
                 .iter()

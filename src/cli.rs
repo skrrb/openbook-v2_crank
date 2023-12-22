@@ -20,9 +20,6 @@ pub struct Args {
     #[arg(long, default_value_t = 60)]
     pub duration_in_seconds: u64,
 
-    #[arg(short = 'c', long)]
-    pub simulation_configuration: String,
-
     #[arg(short = 't', long, default_value_t = String::new())]
     pub transaction_save_file: String,
 

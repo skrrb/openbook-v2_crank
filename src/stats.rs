@@ -125,7 +125,7 @@ impl OpenbookV2SimulationStats {
             let mut tx_confirm_record_reciever = tx_confirm_record_reciever;
             loop {
                 if let Ok(tx_data) = tx_confirm_record_reciever.recv().await {
-                    if let Some(_) = tx_data.confirmed_at {
+                    if tx_data.confirmed_at.is_some() {
                         counters.num_confirmed_txs.fetch_add(1, Ordering::Relaxed);
                         if let Some(error) = tx_data.error {
                             let error = regex.replace_all(&error, "").to_string();

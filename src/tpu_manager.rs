@@ -180,15 +180,14 @@ impl TpuManager {
             self.stats.inc_send(record.is_consume_event);
         }
 
-        if !tpu_client
+        if tpu_client
             .try_send_wire_transaction_batch(
                 batch
                     .iter()
                     .map(|(tx, _)| serialize(tx).expect("serialization should succeed"))
                     .collect(),
             )
-            .await
-            .is_ok()
+            .await.is_err()
         {
             if let Err(e) = self.reset().await {
                 error!("error while reseting tpu client {}", e);

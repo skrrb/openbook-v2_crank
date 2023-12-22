@@ -52,11 +52,8 @@ pub async fn process_blocks(
             };
             for signature in &transaction.signatures {
                 let transaction_record_op = {
-                    let rec = transaction_map.get(&signature);
-                    match rec {
-                        Some(x) => Some(x.clone()),
-                        None => None,
-                    }
+                    let rec = transaction_map.get(signature);
+                    rec.map(|x| x.clone())
                 };
                 // add CU in counter
                 let tx_cu = if let Some(meta) = &meta {
@@ -108,7 +105,7 @@ pub async fn process_blocks(
                     }
                 }
 
-                transaction_map.remove(&signature);
+                transaction_map.remove(signature);
             }
         }
 
@@ -226,7 +223,7 @@ pub fn confirmations_by_blocks(
                                 timed_out: true,
                                 priority_fees: sent_record.priority_fees,
                             });
-                            to_remove.push(signature.clone());
+                            to_remove.push(*signature);
                         }
                     }
 

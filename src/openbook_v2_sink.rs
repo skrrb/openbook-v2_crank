@@ -75,8 +75,7 @@ impl AccountWriteSink for OpenbookV2CrankSink {
             // only crank if at least 1 fill or a sufficient events of other categories are buffered
             let contains_fill_events = event_heap
                 .iter()
-                .find(|e| e.0.event_type == EventType::Fill as u8)
-                .is_some();
+                .any(|e| e.0.event_type == EventType::Fill as u8);
             let len = event_heap.iter().count();
             let has_backlog = len > MAX_BACKLOG;
             let seq_num = event_heap.header.seq_num;
@@ -105,13 +104,13 @@ impl AccountWriteSink for OpenbookV2CrankSink {
 
             let mkt_pk = self
                 .map_event_q_to_market
-                .get(&pk)
-                .expect(&format!("{pk:?} is a known public key"));
+                .get(pk)
+                .unwrap_or_else(|| panic!("{pk:?} is a known public key"));
 
             let mut accounts_meta = openbook_v2::accounts::ConsumeEvents {
                 consume_events_admin: None,
-                event_heap: pk.clone(),
-                market: mkt_pk.clone(),
+                event_heap: *pk,
+                market: *mkt_pk,
             }
             .to_account_metas_wrapper(self.program_id);
 
@@ -132,7 +131,7 @@ impl AccountWriteSink for OpenbookV2CrankSink {
                 instruction_data.data().as_slice(),
                 accounts_meta,
             );
-            (Ok(ix), mkt_pk.clone())
+            (Ok(ix), *mkt_pk)
         };
 
         if let Err(e) = self.instruction_sender.send((mkt_pk, vec![ix?])).await {

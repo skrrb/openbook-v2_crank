@@ -98,7 +98,7 @@ pub fn start(
     let event_heaps = openbook_config
         .markets
         .iter()
-        .map(|x| x.event_heap.clone())
+        .map(|x| x.event_heap)
         .collect_vec();
     let openbook_config = openbook_config.clone();
 
@@ -256,8 +256,7 @@ pub fn init(
 
     let all_queue_pks: BTreeSet<Pubkey> = routes
         .iter()
-        .flat_map(|r| r.matched_pubkeys.iter())
-        .map(|pk| pk.clone())
+        .flat_map(|r| r.matched_pubkeys.iter()).copied()
         .collect();
 
     // update handling thread, reads both slots and account updates
@@ -306,7 +305,7 @@ pub fn init(
 
             for route in routes.iter() {
                 for pk in route.matched_pubkeys.iter() {
-                    match chain_data.account(&pk) {
+                    match chain_data.account(pk) {
                         Ok(account_info) => {
                             let pk_b58 = pk.to_string();
                             if let Some(record) = last_updated.get(&pk_b58) {

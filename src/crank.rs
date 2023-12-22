@@ -256,7 +256,8 @@ pub fn init(
 
     let all_queue_pks: BTreeSet<Pubkey> = routes
         .iter()
-        .flat_map(|r| r.matched_pubkeys.iter()).copied()
+        .flat_map(|r| r.matched_pubkeys.iter())
+        .copied()
         .collect();
 
     // update handling thread, reads both slots and account updates

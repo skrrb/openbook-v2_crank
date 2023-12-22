@@ -187,7 +187,8 @@ impl TpuManager {
                     .map(|(tx, _)| serialize(tx).expect("serialization should succeed"))
                     .collect(),
             )
-            .await.is_err()
+            .await
+            .is_err()
         {
             if let Err(e) = self.reset().await {
                 error!("error while reseting tpu client {}", e);

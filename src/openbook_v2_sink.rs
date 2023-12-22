@@ -1,5 +1,9 @@
-use std::collections::{BTreeMap, HashSet};
-
+use crate::{
+    crank::{AccountData, AccountWriteSink},
+    openbook_config::Obv2Config,
+};
+use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
+use async_channel::Sender;
 use async_trait::async_trait;
 use bytemuck::cast_ref;
 use openbook_v2::state::{EventHeap, EventType, FillEvent, OutEvent};
@@ -8,18 +12,26 @@ use solana_program::{
     pubkey::Pubkey,
 };
 use solana_sdk::account::ReadableAccount;
-
-use crate::{
-    crank::{AccountData, AccountWriteSink},
-    openbook_config::Obv2Config,
-};
-use anchor_lang::AccountDeserialize;
-use anchor_lang::{InstructionData, ToAccountMetas};
-use async_channel::Sender;
+use std::collections::{BTreeMap, HashSet};
 
 const MAX_BACKLOG: usize = 2;
 const MAX_EVENTS_PER_TX: usize = 50;
 const MAX_ACCS_PER_TX: usize = 24;
+
+pub trait ToAccountMetasWrapper {
+    fn to_account_metas_wrapper(&self, program_id: Pubkey) -> Vec<AccountMeta>;
+}
+
+impl<T: ToAccountMetas> ToAccountMetasWrapper for T {
+    fn to_account_metas_wrapper(&self, program_id: Pubkey) -> Vec<AccountMeta> {
+        let mut metas = self.to_account_metas(None);
+        metas
+            .iter_mut()
+            .filter(|meta| meta.pubkey == openbook_v2::ID)
+            .for_each(|meta| meta.pubkey = program_id);
+        metas
+    }
+}
 
 pub struct OpenbookV2CrankSink {
     instruction_sender: Sender<(Pubkey, Vec<Instruction>)>,
@@ -101,7 +113,7 @@ impl AccountWriteSink for OpenbookV2CrankSink {
                 event_heap: pk.clone(),
                 market: mkt_pk.clone(),
             }
-            .to_account_metas(None);
+            .to_account_metas_wrapper(self.program_id);
 
             for event_account in events_accounts {
                 accounts_meta.push(AccountMeta {

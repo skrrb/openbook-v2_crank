@@ -171,7 +171,7 @@ async fn main() -> anyhow::Result<()> {
 
     // wait for 2 minutes fo all the transactions to get confirmed
     let _ = tokio::time::timeout(
-        Duration::from_secs(120),
+        Duration::from_secs(120_000),
         futures::future::select_all(other_services),
     )
     .await;

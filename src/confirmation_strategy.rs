@@ -166,10 +166,11 @@ pub fn confirmations_by_blocks(
         let transaction_map = transaction_map.clone();
         tokio::spawn(async move {
             loop {
-                match tokio::time::timeout(tokio::time::Duration::from_secs(1), tx_record_rx.recv())
-                    .await
+                if let Ok(tx_record) =
+                    tokio::time::timeout(tokio::time::Duration::from_secs(1), tx_record_rx.recv())
+                        .await
                 {
-                    Ok(tx_record) => match tx_record {
+                    match tx_record {
                         Some(tx_record) => {
                             debug!(
                                 "add to queue len={} sig={}",
@@ -182,8 +183,7 @@ pub fn confirmations_by_blocks(
                         None => {
                             break;
                         }
-                    },
-                    Err(_) => {}
+                    }
                 }
             }
         })

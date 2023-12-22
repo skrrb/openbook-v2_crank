@@ -180,10 +180,10 @@ pub struct FilterConfig {
     pub account_ids: Vec<String>,
 }
 
-enum WebsocketMessage {
-    SingleUpdate(Response<RpcKeyedAccount>),
-    SnapshotUpdate((Slot, Vec<(String, Option<UiAccount>)>)),
-    SlotUpdate(Arc<solana_client::rpc_response::SlotUpdate>),
+enum WebsocketMessageUpdate {
+    Single(Response<RpcKeyedAccount>),
+    Snapshot((Slot, Vec<(String, Option<UiAccount>)>)),
+    Slot(Arc<solana_client::rpc_response::SlotUpdate>),
 }
 
 #[derive(Clone, Debug)]
@@ -357,7 +357,7 @@ pub async fn process_events(
     slot_queue_sender: async_channel::Sender<SlotUpdate>,
 ) {
     // Subscribe to program account updates websocket
-    let (update_sender, update_receiver) = async_channel::unbounded::<WebsocketMessage>();
+    let (update_sender, update_receiver) = async_channel::unbounded::<WebsocketMessageUpdate>();
     let config = config.clone();
     let filter_config = filter_config.clone();
     tokio::spawn(async move {
@@ -378,7 +378,7 @@ pub async fn process_events(
         trace!("got update message");
 
         match update {
-            WebsocketMessage::SingleUpdate(update) => {
+            WebsocketMessageUpdate::Single(update) => {
                 trace!("single update");
                 let account: Account = update.value.account.decode().unwrap();
                 let pubkey = Pubkey::from_str(&update.value.pubkey).unwrap();
@@ -387,7 +387,7 @@ pub async fn process_events(
                     .await
                     .expect("send success");
             }
-            WebsocketMessage::SnapshotUpdate((slot, accounts)) => {
+            WebsocketMessageUpdate::Snapshot((slot, accounts)) => {
                 trace!("snapshot update {slot}");
                 for (pubkey, account) in accounts {
                     if let Some(account) = account {
@@ -404,7 +404,7 @@ pub async fn process_events(
                     }
                 }
             }
-            WebsocketMessage::SlotUpdate(update) => {
+            WebsocketMessageUpdate::Slot(update) => {
                 trace!("slot update");
                 let message = match *update {
                     solana_client::rpc_response::SlotUpdate::CreatedBank {
@@ -454,7 +454,7 @@ impl<T, E: std::fmt::Debug> AnyhowWrap for Result<T, E> {
 async fn feed_data(
     config: &SourceConfig,
     filter_config: &FilterConfig,
-    sender: async_channel::Sender<WebsocketMessage>,
+    sender: async_channel::Sender<WebsocketMessageUpdate>,
 ) -> anyhow::Result<()> {
     debug!("feed_data {config:?}");
 
@@ -499,7 +499,7 @@ async fn feed_data(
                     Instant::now() - snapshot_duration - last_snapshot
                 );
                 sender
-                    .send(WebsocketMessage::SnapshotUpdate((slot, accounts)))
+                    .send(WebsocketMessageUpdate::Snapshot((slot, accounts)))
                     .await
                     .expect("sending must succeed");
             } else {
@@ -512,7 +512,7 @@ async fn feed_data(
             account = update_sub.next() => {
                 match account {
                     Some(account) => {
-                        sender.send(WebsocketMessage::SingleUpdate(account.map_err_anyhow()?)).await.expect("sending must succeed");
+                        sender.send(WebsocketMessageUpdate::Single(account.map_err_anyhow()?)).await.expect("sending must succeed");
                     },
                     None => {
                         warn!("account stream closed");
@@ -523,7 +523,7 @@ async fn feed_data(
             slot_update = slot_sub.next() => {
                 match slot_update {
                     Some(slot_update) => {
-                        sender.send(WebsocketMessage::SlotUpdate(slot_update.map_err_anyhow()?)).await.expect("sending must succeed");
+                        sender.send(WebsocketMessageUpdate::Slot(slot_update.map_err_anyhow()?)).await.expect("sending must succeed");
                     },
                     None => {
                         warn!("slot update stream closed");

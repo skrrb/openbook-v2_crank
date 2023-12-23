@@ -3,7 +3,7 @@ use clap::Parser;
 use cli::Args;
 use confirmation_strategy::confirmations_by_blocks;
 use helpers::{create_transaction_bridge, start_blockhash_polling_service};
-use openbook_config::{Obv2Config, Obv2Market};
+use markets::MarketData;
 use openbook_v2::state::Market;
 use result_writer::initialize_result_writers;
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -19,7 +19,7 @@ mod cli;
 mod confirmation_strategy;
 mod crank;
 mod helpers;
-mod openbook_config;
+mod markets;
 mod openbook_v2_sink;
 mod result_writer;
 mod states;
@@ -64,26 +64,24 @@ async fn main() -> anyhow::Result<()> {
         .await
         .expect("cannot fetch markets");
 
-    let obv2_config = Obv2Config {
-        markets: args
-            .markets
-            .iter()
-            .zip(infos)
-            .filter_map(|(pubkey, info)| {
-                if let Some(info) = info {
-                    let market = Market::try_deserialize(&mut &info.data[..])
-                        .expect("cannot deserialize market");
-                    Some(Obv2Market {
-                        market_pk: *pubkey,
-                        event_heap: market.event_heap,
-                        admin: market.consume_events_admin.into(),
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect::<Vec<_>>(),
-    };
+    let markets = args
+        .markets
+        .iter()
+        .zip(infos)
+        .filter_map(|(pubkey, info)| {
+            if let Some(info) = info {
+                let market = Market::try_deserialize(&mut &info.data[..])
+                    .expect("cannot deserialize market");
+                Some(MarketData {
+                    market_pk: *pubkey,
+                    event_heap: market.event_heap,
+                    admin: market.consume_events_admin.into(),
+                })
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
 
     let mut openbook_simulation_stats = OpenbookV2SimulationStats::new();
 
@@ -125,7 +123,7 @@ async fn main() -> anyhow::Result<()> {
         },
         blockhash_rw.clone(),
         current_slot.clone(),
-        &obv2_config,
+        &markets,
         &keeper_authority,
         1000,
         tx_sx.clone(),

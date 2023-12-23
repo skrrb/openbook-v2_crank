@@ -1,6 +1,5 @@
 use crate::{
-    openbook_config::Obv2Config, openbook_v2_sink::OpenbookV2CrankSink,
-    states::TransactionSendRecord,
+    markets::MarketData, openbook_v2_sink::OpenbookV2CrankSink, states::TransactionSendRecord,
 };
 use anyhow::anyhow;
 use async_channel::unbounded;
@@ -53,7 +52,7 @@ pub fn start(
     config: KeeperConfig,
     blockhash: Arc<RwLock<Hash>>,
     current_slot: Arc<AtomicU64>,
-    openbook_config: &Obv2Config,
+    markets: &[MarketData],
     identity: &Keypair,
     prioritization_fee: u64,
     tx_rx: UnboundedSender<(Transaction, TransactionSendRecord)>,
@@ -95,18 +94,14 @@ pub fn start(
         }
     });
 
-    let event_heaps = openbook_config
-        .markets
-        .iter()
-        .map(|x| x.event_heap)
-        .collect_vec();
-    let openbook_config = openbook_config.clone();
+    let event_heaps = markets.iter().map(|x| x.event_heap).collect_vec();
+    let markets = markets.to_vec();
 
     let t2 = tokio::spawn(async move {
         let routes = vec![AccountWriteRoute {
             matched_pubkeys: event_heaps.clone(),
             sink: Arc::new(OpenbookV2CrankSink::new(
-                openbook_config,
+                markets,
                 instruction_sender,
                 config.program_id,
             )),

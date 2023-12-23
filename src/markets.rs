@@ -1,7 +1,7 @@
 use solana_program::pubkey::Pubkey;
 
 #[derive(Clone, Debug)]
-pub struct Obv2Market {
+pub struct MarketData {
     pub market_pk: Pubkey,
     pub event_heap: Pubkey,
     pub admin: Option<Pubkey>,
@@ -9,5 +9,5 @@ pub struct Obv2Market {
 
 #[derive(Clone, Debug)]
 pub struct Obv2Config {
-    pub markets: Vec<Obv2Market>,
+    pub markets: Vec<MarketData>,
 }

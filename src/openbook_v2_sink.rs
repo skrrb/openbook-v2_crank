@@ -1,6 +1,6 @@
 use crate::{
     crank::{AccountData, AccountWriteSink},
-    openbook_config::Obv2Config,
+    markets::MarketData,
 };
 use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
 use async_channel::Sender;
@@ -41,12 +41,12 @@ pub struct OpenbookV2CrankSink {
 
 impl OpenbookV2CrankSink {
     pub fn new(
-        obv2_config: Obv2Config,
+        markets: Vec<MarketData>,
         instruction_sender: Sender<(Pubkey, Vec<Instruction>)>,
         program_id: Pubkey,
     ) -> Self {
         let mut map_event_q_to_market = BTreeMap::new();
-        for market in &obv2_config.markets {
+        for market in &markets {
             map_event_q_to_market.insert(market.event_heap, market.market_pk);
         }
         Self {

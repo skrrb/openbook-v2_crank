@@ -13,7 +13,7 @@ pub struct RpcManager {
 }
 
 impl RpcManager {
-    pub async fn new(
+    pub fn new(
         rpc_client: Arc<RpcClient>,
         tx_send_record: UnboundedSender<TransactionSendRecord>,
         stats: OpenbookV2SimulationStats,

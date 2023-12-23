@@ -1,3 +1,8 @@
+use crate::{rpc_manager::RpcManager, states::TransactionSendRecord, tpu_manager::TpuManager};
+use log::{debug, info};
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_program::hash::Hash;
+use solana_sdk::transaction::Transaction;
 use std::{
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -5,18 +10,11 @@ use std::{
     },
     time::Duration,
 };
-
-use log::{debug, info};
-use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_program::hash::Hash;
-use solana_sdk::transaction::Transaction;
 use tokio::{
     sync::{mpsc::UnboundedReceiver, RwLock},
     task::JoinHandle,
     time::Instant,
 };
-
-use crate::{states::TransactionSendRecord, tpu_manager::TpuManager};
 
 pub async fn get_new_latest_blockhash(client: Arc<RpcClient>, blockhash: &Hash) -> Option<Hash> {
     let start = Instant::now();
@@ -80,7 +78,7 @@ pub fn start_blockhash_polling_service(
     })
 }
 
-pub fn create_transaction_bridge(
+pub fn create_tpu_transaction_bridge(
     tx_rx: UnboundedReceiver<(Transaction, TransactionSendRecord)>,
     tpu_manager: Arc<TpuManager>,
     max_batch_size: usize,
@@ -117,6 +115,34 @@ pub fn create_transaction_bridge(
             tokio::spawn(async move {
                 tpu_manager.send_transaction_batch(&transactions).await;
             });
+        }
+    })
+}
+
+pub fn create_rpc_transaction_bridge(
+    tx_rx: UnboundedReceiver<(Transaction, TransactionSendRecord)>,
+    rpc_manager: Arc<RpcManager>,
+    recv_timeout: Duration,
+) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut tx_rx = tx_rx;
+        loop {
+            match tokio::time::timeout(recv_timeout, tx_rx.recv()).await {
+                Ok(Some((tx, record))) => {
+                    let rpc_manager = rpc_manager.clone();
+                    tokio::spawn(async move {
+                        rpc_manager.send_transaction(&tx, record).await;
+                    });
+                    continue;
+                }
+                Ok(None) => {
+                    // channel broken
+                    break;
+                }
+                Err(_) => {
+                    // timed out continue to send pending transactions
+                }
+            }
         }
     })
 }

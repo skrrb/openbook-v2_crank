@@ -2,7 +2,9 @@ use anchor_lang::AccountDeserialize;
 use clap::Parser;
 use cli::Args;
 use confirmation_strategy::confirmations_by_blocks;
-use helpers::{create_transaction_bridge, start_blockhash_polling_service};
+use helpers::{
+    create_rpc_transaction_bridge, create_tpu_transaction_bridge, start_blockhash_polling_service,
+};
 use markets::MarketData;
 use openbook_v2::state::Market;
 use result_writer::initialize_result_writers;
@@ -31,17 +33,6 @@ mod tpu_manager;
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let identity = if !args.identity.is_empty() {
-        let identity_file = tokio::fs::read_to_string(args.identity.as_str())
-            .await
-            .expect("Cannot find the identity file provided");
-        let identity_bytes: Vec<u8> =
-            serde_json::from_str(&identity_file).expect("Keypair file invalid");
-        Keypair::from_bytes(identity_bytes.as_slice()).expect("Keypair file invalid")
-    } else {
-        Keypair::new()
-    };
-
     let keeper_authority = if !args.keeper_authority.is_empty() {
         let identity_file = tokio::fs::read_to_string(args.keeper_authority.as_str())
             .await
@@ -52,8 +43,6 @@ async fn main() -> anyhow::Result<()> {
     } else {
         panic!("Keeper authority is needed");
     };
-
-    let (tx_sx, tx_rx) = unbounded_channel();
 
     let rpc_client = Arc::new(RpcClient::new_with_commitment(
         args.rpc_url.to_string(),
@@ -100,20 +89,41 @@ async fn main() -> anyhow::Result<()> {
         rpc_client.clone(),
     );
 
-    // start tpu manager
+    let (tx_sx, tx_rx) = unbounded_channel();
     let (tx_send_record_sx, tx_send_record_rx) = unbounded_channel();
-    let tpu_manager = Arc::new(
-        tpu_manager::TpuManager::new(
+
+    // start transaction send bridge either over TPU or RPC
+    let transaction_send_bridge_task = if let Some(identitiy_path) = args.identity {
+        let identity_file = tokio::fs::read_to_string(identitiy_path.as_str())
+            .await
+            .expect("Cannot find the identity file provided");
+        let identity_bytes: Vec<u8> =
+            serde_json::from_str(&identity_file).expect("Keypair file invalid");
+
+        let identity =
+            Keypair::from_bytes(identity_bytes.as_slice()).expect("Keypair file invalid");
+
+        let tpu_manager = Arc::new(
+            tpu_manager::TpuManager::new(
+                rpc_client.clone(),
+                args.ws_url.clone(),
+                16,
+                identity,
+                tx_send_record_sx,
+                openbook_simulation_stats.clone(),
+            )
+            .await,
+        );
+        tpu_manager.force_reset_after_every(Duration::from_secs(600)); // reset every 10 minutes
+        create_tpu_transaction_bridge(tx_rx, tpu_manager, 16, Duration::from_millis(5))
+    } else {
+        let rpc_manager = Arc::new(rpc_manager::RpcManager::new(
             rpc_client.clone(),
-            args.ws_url.clone(),
-            16,
-            identity,
             tx_send_record_sx,
             openbook_simulation_stats.clone(),
-        )
-        .await,
-    );
-    tpu_manager.force_reset_after_every(Duration::from_secs(600)); // reset every 10 minutes
+        ));
+        create_rpc_transaction_bridge(tx_rx, rpc_manager, Duration::from_millis(5))
+    };
 
     // start event queue crank
     let mut other_services = crank::start(
@@ -153,10 +163,6 @@ async fn main() -> anyhow::Result<()> {
     );
 
     other_services.push(bh_polling_task);
-
-    // start transaction send bridge
-    let transaction_send_bridge_task =
-        create_transaction_bridge(tx_rx, tpu_manager, 16, Duration::from_millis(5));
     other_services.push(transaction_send_bridge_task);
 
     // task which updates stats

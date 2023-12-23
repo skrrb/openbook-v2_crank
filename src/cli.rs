@@ -14,8 +14,8 @@ pub struct Args {
     #[arg(short = 'f', long, default_value_t = 16)]
     pub fanout_size: u64,
 
-    #[arg(short = 'k', long, default_value_t = String::new())]
-    pub identity: String,
+    #[arg(short = 'k', long)]
+    pub identity: Option<String>,
 
     #[arg(long, default_value_t = 60)]
     pub duration_in_seconds: u64,

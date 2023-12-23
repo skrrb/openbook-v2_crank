@@ -1,5 +1,5 @@
 use crate::states::TransactionSendRecord;
-use crate::stats::OpenbookV2SimulationStats;
+use crate::stats::CrankStats;
 use bincode::serialize;
 use log::{error, info, warn};
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -29,7 +29,7 @@ pub struct TpuManager {
     fanout_slots: u64,
     identity: Arc<Keypair>,
     tx_send_record: UnboundedSender<TransactionSendRecord>,
-    stats: OpenbookV2SimulationStats,
+    stats: CrankStats,
 }
 
 impl TpuManager {
@@ -39,7 +39,7 @@ impl TpuManager {
         fanout_slots: u64,
         identity: Keypair,
         tx_send_record: UnboundedSender<TransactionSendRecord>,
-        stats: OpenbookV2SimulationStats,
+        stats: CrankStats,
     ) -> Self {
         let connection_cache = ConnectionCache::new_with_client_options(
             "",

@@ -1,5 +1,5 @@
 use crate::states::TransactionSendRecord;
-use crate::stats::OpenbookV2SimulationStats;
+use crate::stats::CrankStats;
 use log::{error, warn};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use std::sync::Arc;
@@ -9,14 +9,14 @@ use tokio::sync::mpsc::UnboundedSender;
 pub struct RpcManager {
     rpc_client: Arc<RpcClient>,
     tx_send_record: UnboundedSender<TransactionSendRecord>,
-    stats: OpenbookV2SimulationStats,
+    stats: CrankStats,
 }
 
 impl RpcManager {
     pub fn new(
         rpc_client: Arc<RpcClient>,
         tx_send_record: UnboundedSender<TransactionSendRecord>,
-        stats: OpenbookV2SimulationStats,
+        stats: CrankStats,
     ) -> Self {
         Self {
             rpc_client,

@@ -72,13 +72,13 @@ impl Counters {
 }
 
 #[derive(Debug, Clone)]
-pub struct OpenbookV2SimulationStats {
+pub struct CrankStats {
     counters: Counters,
     previous_counters: Arc<Mutex<NACounters>>,
     instant: Instant,
 }
 
-impl OpenbookV2SimulationStats {
+impl CrankStats {
     pub fn new() -> Self {
         Self {
             counters: Counters::default(),
@@ -121,17 +121,13 @@ impl OpenbookV2SimulationStats {
         self.counters.num_sent.fetch_add(1, Ordering::Relaxed);
     }
 
-    pub async fn report(&mut self, is_final: bool, name: &'static str) {
+    pub async fn report(&mut self) {
         let time_diff = std::time::Instant::now() - self.instant;
-        let mut counters = self.counters.to_na_counters().await;
+        let counters = self.counters.to_na_counters().await;
 
-        println!("\n\n{} at {} secs", name, time_diff.as_secs());
-        if !is_final {
-            println!("Recently sent transactions could not yet be confirmed and would be confirmed shortly.\n
-            diff is wrt previous report");
-        } else {
-            counters.num_timeout_txs = counters.num_sent - counters.num_confirmed_txs;
-        }
+        println!("\n\n openbook_v2 crank at {} secs", time_diff.as_secs());
+        println!("Recently sent transactions could not yet be confirmed and would be confirmed shortly.\n
+        diff is wrt previous report");
 
         let diff = {
             let mut prev_counter_lock = self.previous_counters.lock().unwrap();
@@ -141,24 +137,24 @@ impl OpenbookV2SimulationStats {
         };
 
         println!(
-            "Number of transactions Sent:({}) (including keeper) (Diff:({}))",
+            "Number of transactions Sent: {} (Diff: {})",
             counters.num_sent, diff.num_sent,
         );
 
         println!(
-            "Transactions confirmed : {}%",
+            "Transactions confirmed: {}%",
             (counters.num_confirmed_txs * 100)
                 .checked_div(counters.num_sent)
                 .unwrap_or(0)
         );
         println!(
-            "Transactions successful : {}%",
+            "Transactions successful: {}%",
             (counters.num_successful * 100)
                 .checked_div(counters.num_sent)
                 .unwrap_or(0)
         );
         println!(
-            "Transactions timed out : {}%",
+            "Transactions timed out: {}%",
             (counters.num_timeout_txs * 100)
                 .checked_div(counters.num_sent)
                 .unwrap_or(0)
@@ -172,7 +168,7 @@ impl OpenbookV2SimulationStats {
             .collect_vec();
         let mut errors_to_print: String = String::new();
         for (idx, (error, count)) in top_5_errors {
-            println!("Error #{idx} : {error} ({count})");
+            println!("Error #{idx}: {error} ({count})");
             errors_to_print += format!("{error}({count}),").as_str();
         }
         println!("\n");

@@ -10,7 +10,7 @@ use openbook_v2::state::Market;
 use result_writer::initialize_result_writers;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::{commitment_config::CommitmentConfig, signature::Keypair};
-use stats::OpenbookV2SimulationStats;
+use stats::CrankStats;
 use std::{
     sync::{atomic::AtomicU64, Arc},
     time::Duration,
@@ -73,8 +73,6 @@ async fn main() -> anyhow::Result<()> {
         })
         .collect::<Vec<_>>();
 
-    let mut openbook_simulation_stats = OpenbookV2SimulationStats::new();
-
     // create a task that updates blockhash after every interval
     let recent_blockhash = rpc_client
         .get_latest_blockhash()
@@ -89,6 +87,7 @@ async fn main() -> anyhow::Result<()> {
         rpc_client.clone(),
     );
 
+    let crank_stats = CrankStats::new();
     let (tx_sx, tx_rx) = unbounded_channel();
     let (tx_send_record_sx, tx_send_record_rx) = unbounded_channel();
 
@@ -110,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
                 16,
                 identity,
                 tx_send_record_sx,
-                openbook_simulation_stats.clone(),
+                crank_stats.clone(),
             )
             .await,
         );
@@ -120,13 +119,13 @@ async fn main() -> anyhow::Result<()> {
         let rpc_manager = Arc::new(rpc_manager::RpcManager::new(
             rpc_client.clone(),
             tx_send_record_sx,
-            openbook_simulation_stats.clone(),
+            crank_stats.clone(),
         ));
         create_rpc_transaction_bridge(tx_rx, rpc_manager, Duration::from_millis(5))
     };
 
     // start event queue crank
-    let mut other_services = crank::start(
+    let mut crank_services = crank::start(
         crank::KeeperConfig {
             program_id: args.program_id,
             rpc_url: args.rpc_url.to_string(),
@@ -144,7 +143,7 @@ async fn main() -> anyhow::Result<()> {
     let (tx_confirmation_sx, tx_confirmation_rx) = tokio::sync::broadcast::channel(8192);
     let (blocks_confirmation_sx, blocks_confirmation_rx) = tokio::sync::broadcast::channel(8192);
 
-    openbook_simulation_stats.update_from_tx_status_stream(tx_confirmation_sx.subscribe());
+    crank_stats.update_from_tx_status_stream(tx_confirmation_sx.subscribe());
     let mut confirmation_services = confirmations_by_blocks(
         rpc_client.clone(),
         tx_send_record_rx,
@@ -152,7 +151,6 @@ async fn main() -> anyhow::Result<()> {
         blocks_confirmation_sx,
         current_slot.load(std::sync::atomic::Ordering::Relaxed),
     );
-    other_services.append(&mut confirmation_services);
 
     // start writing results
     initialize_result_writers(
@@ -162,28 +160,21 @@ async fn main() -> anyhow::Result<()> {
         blocks_confirmation_rx,
     );
 
-    other_services.push(bh_polling_task);
-    other_services.push(transaction_send_bridge_task);
-
     // task which updates stats
-    let mut stats = openbook_simulation_stats.clone();
+    let mut stats = crank_stats.clone();
     let reporting_thread = tokio::spawn(async move {
         loop {
             tokio::time::sleep(Duration::from_secs(60)).await;
-            stats.report(false, "openbook v2 simulation").await;
+            stats.report().await;
         }
     });
-    other_services.push(reporting_thread);
 
-    // wait for 2 minutes fo all the transactions to get confirmed
-    let _ = tokio::time::timeout(
-        Duration::from_secs(120_000),
-        futures::future::select_all(other_services),
-    )
-    .await;
+    crank_services.append(&mut confirmation_services);
+    crank_services.push(bh_polling_task);
+    crank_services.push(transaction_send_bridge_task);
+    crank_services.push(reporting_thread);
 
-    openbook_simulation_stats
-        .report(true, "Openbook Simulation End")
-        .await;
+    let _ = futures::future::select_all(crank_services).await;
+
     Ok(())
 }

@@ -10,7 +10,6 @@ pub struct TransactionSendRecord {
     pub sent_slot: Slot,
     pub user: Option<Pubkey>,
     pub market: Option<Pubkey>,
-    pub is_consume_event: bool,
     pub priority_fees: u64,
 }
 
@@ -28,7 +27,6 @@ pub struct TransactionConfirmRecord {
     pub market: Option<String>,
     pub block_hash: Option<String>,
     pub slot_processed: Option<Slot>,
-    pub is_consume_event: bool,
     pub timed_out: bool,
     pub priority_fees: u64,
 }

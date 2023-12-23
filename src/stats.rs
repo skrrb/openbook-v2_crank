@@ -21,14 +21,6 @@ struct NACounters {
     num_successful: u64,
     num_sent: u64,
 
-    // sent transasctions
-    num_users_txs: u64,
-    num_consume_events_txs: u64,
-
-    // successful transasctions
-    succ_users_txs: u64,
-    succ_consume_events_txs: u64,
-
     // errors section
     errors: HashMap<String, u64>,
 }
@@ -49,10 +41,6 @@ impl NACounters {
             num_timeout_txs: self.num_timeout_txs - other.num_timeout_txs,
             num_successful: self.num_successful - other.num_successful,
             num_sent: self.num_sent - other.num_sent,
-            num_users_txs: self.num_users_txs - other.num_users_txs,
-            num_consume_events_txs: self.num_consume_events_txs - other.num_consume_events_txs,
-            succ_users_txs: self.succ_users_txs - other.succ_users_txs,
-            succ_consume_events_txs: self.succ_consume_events_txs - other.succ_consume_events_txs,
             errors: new_error_count,
         }
     }
@@ -66,14 +54,6 @@ struct Counters {
     num_successful: Arc<AtomicU64>,
     num_sent: Arc<AtomicU64>,
 
-    // sent transasctions
-    num_users_txs: Arc<AtomicU64>,
-    num_consume_events_txs: Arc<AtomicU64>,
-
-    // successful transasctions
-    succ_users_txs: Arc<AtomicU64>,
-    succ_consume_events_txs: Arc<AtomicU64>,
-
     // Errors
     errors: Arc<RwLock<HashMap<String, u64>>>,
 }
@@ -86,14 +66,6 @@ impl Counters {
             num_timeout_txs: self.num_timeout_txs.load(Ordering::Relaxed),
             num_successful: self.num_successful.load(Ordering::Relaxed),
             num_sent: self.num_sent.load(Ordering::Relaxed),
-
-            // sent transasctions
-            num_users_txs: self.num_users_txs.load(Ordering::Relaxed),
-            num_consume_events_txs: self.num_consume_events_txs.load(Ordering::Relaxed),
-
-            // successful transasctions
-            succ_users_txs: self.succ_users_txs.load(Ordering::Relaxed),
-            succ_consume_events_txs: self.succ_consume_events_txs.load(Ordering::Relaxed),
             errors: self.errors.read().await.clone(),
         }
     }
@@ -137,14 +109,6 @@ impl OpenbookV2SimulationStats {
                         }
                     } else {
                         counters.num_successful.fetch_add(1, Ordering::Relaxed);
-
-                        if tx_data.is_consume_event {
-                            counters
-                                .succ_consume_events_txs
-                                .fetch_add(1, Ordering::Relaxed);
-                        } else {
-                            counters.succ_users_txs.fetch_add(1, Ordering::Relaxed);
-                        }
                     }
                 } else {
                     counters.num_timeout_txs.fetch_add(1, Ordering::Relaxed);
@@ -153,16 +117,8 @@ impl OpenbookV2SimulationStats {
         })
     }
 
-    pub fn inc_send(&self, is_consume_event: bool) {
+    pub fn inc_send(&self) {
         self.counters.num_sent.fetch_add(1, Ordering::Relaxed);
-
-        if is_consume_event {
-            self.counters
-                .num_consume_events_txs
-                .fetch_add(1, Ordering::Relaxed);
-        } else {
-            self.counters.num_users_txs.fetch_add(1, Ordering::Relaxed);
-        }
     }
 
     pub async fn report(&mut self, is_final: bool, name: &'static str) {
@@ -187,22 +143,6 @@ impl OpenbookV2SimulationStats {
         println!(
             "Number of transactions Sent:({}) (including keeper) (Diff:({}))",
             counters.num_sent, diff.num_sent,
-        );
-
-        println!(
-            "User transactions : Sent({}), Successful({}) (Diff : Sent({}), Successful({}))",
-            counters.num_users_txs,
-            counters.succ_users_txs,
-            diff.num_users_txs,
-            diff.succ_users_txs,
-        );
-
-        println!(
-            "Keeper Cosume Events : Sent({}), Successful({}) (Diff : Sent({}), Successful({}))",
-            counters.num_consume_events_txs,
-            counters.succ_consume_events_txs,
-            diff.num_consume_events_txs,
-            diff.succ_consume_events_txs
         );
 
         println!(

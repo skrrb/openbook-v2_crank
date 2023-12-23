@@ -86,7 +86,6 @@ pub fn start(
                     market: Some(market),
                     priority_fees: prioritization_fee,
                     user: None,
-                    is_consume_event: true,
                 };
 
                 let _ = tx_rx.send((tx, tx_send_record));

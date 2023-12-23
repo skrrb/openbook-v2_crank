@@ -138,27 +138,6 @@ impl TpuManager {
         self.tpu_client.read().await.clone()
     }
 
-    // pub async fn send_transaction(
-    //     &self,
-    //     transaction: &solana_sdk::transaction::Transaction,
-    //     transaction_sent_record: TransactionSendRecord,
-    // ) -> bool {
-    //     let tpu_client = self.get_tpu_client().await;
-    //     let tx_sent_record = self.tx_send_record.clone();
-    //     let sent = tx_sent_record.send(transaction_sent_record);
-    //     if sent.is_err() {
-    //         warn!(
-    //             "sending error on channel : {}",
-    //             sent.err().unwrap().to_string()
-    //         );
-    //         if let Err(e) = self.reset().await {
-    //             error!("error while reseting tpu client {}", e);
-    //         }
-    //     }
-
-    //     tpu_client.send_transaction(transaction).await
-    // }
-
     pub async fn send_transaction_batch(
         &self,
         batch: &Vec<(Transaction, TransactionSendRecord)>,
@@ -176,8 +155,8 @@ impl TpuManager {
             }
         }
 
-        for (_, record) in batch {
-            self.stats.inc_send(record.is_consume_event);
+        for _ in batch {
+            self.stats.inc_send()
         }
 
         if tpu_client

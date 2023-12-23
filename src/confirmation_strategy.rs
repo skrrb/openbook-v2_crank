@@ -96,7 +96,6 @@ pub async fn process_blocks(
                         slot_leader: Some(slot_leader.clone()),
                         timed_out: false,
                         priority_fees: transaction_record.priority_fees,
-                        is_consume_event: transaction_record.is_consume_event,
                     }) {
                         Ok(_) => {}
                         Err(e) => {
@@ -217,7 +216,6 @@ pub fn confirmations_by_blocks(
                                 block_hash: None,
                                 market: sent_record.market.map(|x| x.to_string()),
                                 user: sent_record.user.map(|x| x.to_string()),
-                                is_consume_event: sent_record.is_consume_event,
                                 slot_processed: None,
                                 slot_leader: None,
                                 timed_out: true,

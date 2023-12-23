@@ -22,6 +22,7 @@ mod helpers;
 mod markets;
 mod openbook_v2_sink;
 mod result_writer;
+mod rpc_manager;
 mod states;
 mod stats;
 mod tpu_manager;
@@ -152,6 +153,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     other_services.push(bh_polling_task);
+
     // start transaction send bridge
     let transaction_send_bridge_task =
         create_transaction_bridge(tx_rx, tpu_manager, 16, Duration::from_millis(5));

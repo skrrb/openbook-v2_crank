@@ -1,7 +1,7 @@
 use crate::states::TransactionSendRecord;
 use crate::stats::CrankStats;
 use log::{error, warn};
-use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_client::{nonblocking::rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use std::sync::Arc;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -41,7 +41,15 @@ impl RpcManager {
             );
         }
 
-        let res = self.rpc_client.send_transaction(transaction).await;
+        let config = RpcSendTransactionConfig {
+            skip_preflight: true,
+            ..RpcSendTransactionConfig::default()
+        };
+
+        let res = self
+            .rpc_client
+            .send_transaction_with_config(transaction, config)
+            .await;
         if let Err(e) = &res {
             error!("error sending txs over rpc {}", e);
         }

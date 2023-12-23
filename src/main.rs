@@ -33,15 +33,13 @@ mod tpu_manager;
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let keeper_authority = if !args.keeper_authority.is_empty() {
-        let identity_file = tokio::fs::read_to_string(args.keeper_authority.as_str())
+    let crank_authority = {
+        let identity_file = tokio::fs::read_to_string(args.crank_authority.as_str())
             .await
             .expect("Cannot find the keeper identity file provided");
         let identity_bytes: Vec<u8> =
             serde_json::from_str(&identity_file).expect("Keypair file invalid");
         Keypair::from_bytes(identity_bytes.as_slice()).expect("Keypair file invalid")
-    } else {
-        panic!("Keeper authority is needed");
     };
 
     let rpc_client = Arc::new(RpcClient::new_with_commitment(
@@ -134,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
         blockhash_rw.clone(),
         current_slot.clone(),
         &markets,
-        &keeper_authority,
+        &crank_authority,
         1000,
         tx_sx.clone(),
     );

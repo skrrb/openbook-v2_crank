@@ -1,3 +1,5 @@
+use crate::states::TransactionConfirmRecord;
+use itertools::Itertools;
 use std::{
     collections::HashMap,
     sync::Mutex,
@@ -7,9 +9,6 @@ use std::{
     },
     time::Instant,
 };
-
-use crate::states::TransactionConfirmRecord;
-use itertools::Itertools;
 use tokio::{sync::RwLock, task::JoinHandle};
 
 // Non atomic version of counters

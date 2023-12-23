@@ -20,14 +20,14 @@ pub struct Args {
     #[arg(long, default_value_t = 60)]
     pub duration_in_seconds: u64,
 
-    #[arg(short = 't', long, default_value_t = String::new())]
-    pub transaction_save_file: String,
+    #[arg(short = 't', long)]
+    pub transaction_save_file: Option<String>,
 
-    #[arg(short = 'b', long, default_value_t = String::new())]
-    pub block_data_save_file: String,
+    #[arg(short = 'b', long)]
+    pub block_data_save_file: Option<String>,
 
-    #[arg(short = 'a', long, default_value_t = String::new())]
-    pub keeper_authority: String,
+    #[arg(short = 'a', long, required = true)]
+    pub crank_authority: String,
 
     #[arg(long, default_value_t = 10)]
     pub transaction_retry_in_ms: u64,

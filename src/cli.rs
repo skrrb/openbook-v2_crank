@@ -17,9 +17,6 @@ pub struct Args {
     #[arg(short = 'k', long)]
     pub identity: Option<String>,
 
-    #[arg(long, default_value_t = 60)]
-    pub duration_in_seconds: u64,
-
     #[arg(short = 't', long)]
     pub transaction_save_file: Option<String>,
 

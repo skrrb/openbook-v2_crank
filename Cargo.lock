@@ -1654,6 +1654,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2e66c9d817f1720209181c316d28635c050fa304f9c79e47a520882661b7308"
 
 [[package]]
+name = "default-env"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f753eb82d29277e79efc625e84aecacfd4851ee50e05a8573a4740239a77bfd3"
+dependencies = [
+ "proc-macro2 0.4.30",
+ "quote 0.6.13",
+ "syn 0.15.44",
+]
+
+[[package]]
 name = "der"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3604,12 +3615,13 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 [[package]]
 name = "openbook-v2"
 version = "0.1.0"
-source = "git+https://github.com/openbook-dex/openbook-v2?tag=v1.1#1899fa27a070ce1134b1c6b32a4d3f7669045cce"
+source = "git+https://github.com/openbook-dex/openbook-v2?tag=v1.6#59cbaba452a11bae2857ce71f5f0817ff7201c88"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
  "arrayref",
  "bytemuck",
+ "default-env",
  "derivative",
  "fixed",
  "itertools 0.10.5",
